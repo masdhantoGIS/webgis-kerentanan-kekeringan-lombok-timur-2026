@@ -1,0 +1,1 @@
+var json_Titik_Pusat_Kota_Kab_Lombok_Timur_16 = {"type":"FeatureCollection","name":"Titik_Pusat_Kota_Kab_Lombok_Timur_16","crs":{"type":"name","properties":{"name":"urn:ogc:def:crs:OGC:1.3:CRS84"}},"features":[{"type":"Feature","properties":{"id":"1"},"geometry":{"type":"Point","coordinates":[116.529724470261584,-8.651241196886083]}}]}
