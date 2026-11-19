@@ -1044,6 +1044,156 @@ map.on('overlayadd overlayremove', function() {
     var currentVal = parseFloat(document.getElementById('layer-opacity-slider').value);
     updateOverlayOpacity(currentVal);
 });
+// ============================================================
+// PANEL LEGENDA DINAMIS OTOMATIS (MENGIKUTI LAYER RASTER AKTIF)
+// ============================================================
+var legendData = {
+    "01_Kerawanan_Kekeringan_Kelas": {
+        title: "Kerawanan Kekeringan",
+        items: [
+            {color: "#1a9850", label: "Sangat Rendah"},
+            {color: "#a6d96a", label: "Rendah"},
+            {color: "#ffffbf", label: "Sedang"},
+            {color: "#fdae61", label: "Tinggi"},
+            {color: "#d7191c", label: "Sangat Tinggi"}
+        ]
+    },
+    "02_Kerawanan_Kekeringan_Skor": {
+        title: "Skor Kerawanan Kekeringan",
+        items: [
+            {color: "#1a9850", label: "1.5 (Sangat Rendah)"},
+            {color: "#a6d96a", label: "2.2 (Rendah)"},
+            {color: "#ffffbf", label: "2.8 (Sedang)"},
+            {color: "#fdae61", label: "3.4 (Tinggi)"},
+            {color: "#d7191c", label: "4.2 (Sangat Tinggi)"}
+        ]
+    },
+    "03_Potensi_AirTanah_Kelas": {
+        title: "Potensi Air Tanah",
+        items: [
+            {color: "#d73027", label: "Sangat Rendah"},
+            {color: "#fc8d59", label: "Rendah"},
+            {color: "#ffffbf", label: "Sedang"},
+            {color: "#91bfdb", label: "Tinggi"},
+            {color: "#4575b4", label: "Sangat Tinggi"}
+        ]
+    },
+    "04_Aksesibilitas_Air_Kelas": {
+        title: "Aksesibilitas Sumber Air",
+        items: [
+            {color: "#1a9850", label: "Sangat Mudah (< 300 m)"},
+            {color: "#91cf60", label: "Mudah (300 - 800 m)"},
+            {color: "#ffffbf", label: "Sedang (0.8 - 1.5 km)"},
+            {color: "#fc8d59", label: "Sulit (1.5 - 3 km)"},
+            {color: "#d73027", label: "Sangat Sulit (> 3 km)"}
+        ]
+    },
+    "05_Jarak_Sumber_Air_Meter": {
+        title: "Jarak Efektif ke Sumber Air",
+        items: [
+            {color: "#1a9850", label: "0 m (Sangat Dekat)"},
+            {color: "#91cf60", label: "500 m"},
+            {color: "#ffffbf", label: "1.500 m"},
+            {color: "#fc8d59", label: "3.000 m"},
+            {color: "#d73027", label: "> 5.000 m (Sangat Jauh)"}
+        ]
+    },
+    "06_Curah_Hujan_Tahunan_mm": {
+        title: "Curah Hujan Tahunan (mm)",
+        items: [
+            {color: "#d73027", label: "< 1.000 mm (Kering)"},
+            {color: "#fc8d59", label: "1.500 mm"},
+            {color: "#fee090", label: "2.000 mm"},
+            {color: "#91bfdb", label: "2.500 mm"},
+            {color: "#08306b", label: "> 3.000 mm (Sangat Basah)"}
+        ]
+    },
+    "07_Curah_Hujan_Kemarau_mm": {
+        title: "Curah Hujan Kemarau (mm)",
+        items: [
+            {color: "#8b0000", label: "< 50 mm (Sangat Kering)"},
+            {color: "#ff8c00", label: "150 mm"},
+            {color: "#ffffbf", label: "300 mm"},
+            {color: "#91bfdb", label: "450 mm"},
+            {color: "#08306b", label: "> 600 mm"}
+        ]
+    },
+    "08_Indeks_SPI3_2026_10": {
+        title: "Indeks Kekeringan (SPI-3)",
+        items: [
+            {color: "#8b0000", label: "< -2.0 (Sangat Kering)"},
+            {color: "#ffa500", label: "-1.0 (Kering)"},
+            {color: "#ffff99", label: "0.0 (Normal)"},
+            {color: "#74add1", label: "1.0 (Basah)"},
+            {color: "#313695", label: "> 2.0 (Sangat Basah)"}
+        ]
+    },
+    "09_Frekuensi_Kejadian_Kering": {
+        title: "Frekuensi Kejadian Kering",
+        items: [
+            {color: "#ffffff", label: "0% (Jarang)"},
+            {color: "#ffff00", label: "8%"},
+            {color: "#ffa500", label: "15%"},
+            {color: "#ff0000", label: "22%"},
+            {color: "#8b0000", label: "> 30% (Sering Kering)"}
+        ]
+    }
+};
+
+var dynamicLegend = L.control({position: 'bottomright'});
+dynamicLegend.onAdd = function (map) {
+    var div = L.DomUtil.create('div', 'info legend');
+    div.id = 'custom-dynamic-legend';
+    div.style.background = 'rgba(255, 255, 255, 0.94)';
+    div.style.padding = '10px 14px';
+    div.style.borderRadius = '6px';
+    div.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+    div.style.fontFamily = 'sans-serif';
+    div.style.fontSize = '12px';
+    div.style.maxHeight = '260px';
+    div.style.overflowY = 'auto';
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+};
+dynamicLegend.addTo(map);
+
+function refreshCustomLegend() {
+    var box = document.getElementById('custom-dynamic-legend');
+    if (!box) return;
+    var html = '';
+    var labels = document.querySelectorAll('.leaflet-control-layers-overlays label');
+    
+    labels.forEach(function(lbl) {
+        var cb = lbl.querySelector('input[type="checkbox"]');
+        var text = lbl.innerText.trim();
+        if (cb && cb.checked) {
+            for (var key in legendData) {
+                if (text.indexOf(key) !== -1) {
+                    var info = legendData[key];
+                    html += '<div style="font-weight:bold; margin:4px 0 6px 0; color:#111; border-bottom:1px solid #ddd; padding-bottom:3px;">' + info.title + '</div>';
+                    info.items.forEach(function(it) {
+                        html += '<div style="display:flex; align-items:center; margin-bottom:4px;">' +
+                                '<span style="display:inline-block; width:14px; height:14px; background:' + it.color + '; border:1px solid #777; margin-right:8px; flex-shrink:0;"></span>' +
+                                '<span style="color:#333;">' + it.label + '</span></div>';
+                    });
+                    break;
+                }
+            }
+        }
+    });
+
+    if (html === '') {
+        box.style.display = 'none';
+    } else {
+        box.style.display = 'block';
+        box.innerHTML = html;
+    }
+}
+
+setTimeout(refreshCustomLegend, 600);
+map.on('overlayadd overlayremove', function() {
+    setTimeout(refreshCustomLegend, 100);
+});
         </script>        
     </body>
 </html>
